@@ -1,6 +1,6 @@
 import asyncio
 from fastapi import APIRouter
-from services.schedule import journal_service
+from server.services.journal import journal_service
 from schemas.schedule import LoginRequest
 
 router = APIRouter(prefix="/Schedule", tags=["College"])

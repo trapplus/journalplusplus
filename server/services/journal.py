@@ -15,7 +15,7 @@ class journal_service:
     async def get_schedule_data_from(self, 
             username: str,
             password: str,
-            ):
+            )   -> dict:
         
         # setup auth data
         self.auth_data = {
