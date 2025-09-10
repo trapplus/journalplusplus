@@ -1,15 +1,15 @@
 import asyncio
 from fastapi import APIRouter
-from server.services.journal import journal_service
+from services.journal import journal_service
 from schemas.schedule import LoginRequest
 
 router = APIRouter(prefix="/Schedule", tags=["College"])
 
 service = journal_service()
 
-@router.post("/schedule")
+@router.post("/get-schedule-data")
 async def get_schedule_data(data: LoginRequest):
-    responce = await service.get_schedule_data_from(
+    responce = await service.get_schedule_data(
         username=data.username,
         password=data.password
     )
