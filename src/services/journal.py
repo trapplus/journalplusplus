@@ -57,11 +57,9 @@ class journal_service:
                 raise HTTPException(status_code=401, detail="JWT token is missing")
             
             # Masked JWT for user logging
-            masked_jwt = ".".join(
-                part[:7] + "*" * (len(part) - 7) for part in jwt_token.split("."))
+            masked_jwt = ".".join(part[:7] + "*" * (len(part) - 7) for part in jwt_token.split("."))
             logger.info(f"JWT is valide! JWT:{masked_jwt}")
-            logger.debug(f"JWT: {jwt_token}")
-            
+                  
             # Update current session headers whis JWT for get data
             client.headers.update({
                 "Authorization": f"Bearer {jwt_token}",
