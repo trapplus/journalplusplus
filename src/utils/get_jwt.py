@@ -1,13 +1,14 @@
 import httpx
+from src import container as cont
+
+
 
 class jwt_manager:
     def __init__(self):
-        self.API_URL = "https://msapi.top-academy.ru/api/v2" 
-        
-        self.APP_KEY = "6a56a5df2667e65aab73ce76d1dd737f7d1faef9c52e8b8c55ac75f565d8e8a6"
-        
+        self.API_URL = "https://msapi.top-academy.ru/api/v2"  
+         
         self.auth_data = {
-            "application_key": self.APP_KEY,
+            "application_key": cont.,
             "username": "",
             "password": "",
             "id_city": None,
