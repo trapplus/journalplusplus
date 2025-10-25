@@ -1,7 +1,9 @@
-import httpx
 import logging
-from src import container as cont
+
+import httpx
 from fastapi import HTTPException
+
+from src import container as cont
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,7 @@ class auth:
                     "Content-Type": "application/json",
                     "Referer": "https://journal.top-academy.ru/",  
                     "Origin": "https://journal.top-academy.ru",
-                    "X-CSRF-TOKEN": auth._get_csrf_token(),
+                    "X-CSRF-TOKEN": await auth._get_csrf_token(self),
                 }
         
         logger.debug(f"Auth headers: \n{headers}")
@@ -54,7 +56,7 @@ class auth:
 
             # Auth and return JWT
             resp = await client.post(
-                "/auth/login", json=self.auth_data, headers=headers)
+                "/auth/login", json=auth_data, headers=headers)
             
             # raise not standard http code (404, 403, 503 and more..)
             resp.raise_for_status()
