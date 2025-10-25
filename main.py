@@ -1,23 +1,16 @@
 import asyncio
 import logging
 import sys
-from os import getenv
 
-from aiogram.filters import CommandStart
-from aiogram.types import Message
+from src import container as cont
 
+disp = cont.objects.dp
 
-@dp.message(CommandStart())
-async def command_start_handler(message: Message) -> None:
-    """
-    This test command handler `/start` command
-    """
-    await message.answer(f"Hello, {html.bold(message.from_user.full_name)}!")
 
 async def main() -> None:
     # Initialize Bot instance with default bot properties which will be passed to all API calls
 
-    await dp.start_polling(bot)
+    await disp.start_polling(cont.objects.bot)
 
 
 if __name__ == "__main__":

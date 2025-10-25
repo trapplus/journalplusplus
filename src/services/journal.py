@@ -1,7 +1,5 @@
-import asyncio
 import logging
 import httpx
-import datetime
 from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -10,7 +8,7 @@ class journal_service:
     def __init__(self) -> None:
         self.APP_KEY = "6a56a5df2667e65aab73ce76d1dd737f7d1faef9c52e8b8c55ac75f565d8e8a6"
         self.API_URL = "https://msapi.top-academy.ru/api/v2"
-        self.date =  datetime.date.today()
+        
 
     async def get_schedule_data(self, 
             username: str,
