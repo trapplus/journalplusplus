@@ -1,12 +1,13 @@
 [project]
 name = "journalplusplus"
 version = "0.1.0"
-description = "Add your description here"
+description = "Bot for use IT Top journal in telegram"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "aiogram>=3.22.0",
+    "aiogram>=3.26.0",
     "dotenv>=0.9.9",
-    "fastapi[standard]>=0.116.1",
     "httpx>=0.28.1",
+    "pydantic>=2.12.5",
+    "starlette>=1.0.0",
 ]
