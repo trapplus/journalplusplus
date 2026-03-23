@@ -143,7 +143,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ### Reporting bugs
 
-Please open an [issue](https://github.com/your-username/journal-plus-plus/issues) and include:
+Please open an [issue](https://github.com/trapplus/journal-plus-plus/issues) and include:
 - What you did
 - What you expected
 - What actually happened
@@ -156,8 +156,8 @@ Please open an [issue](https://github.com/your-username/journal-plus-plus/issues
 ## 📬 Contact & Support
 
 - **SDK issues** → [ITTopTools/top\_journal\_sdk](https://github.com/ITTopTools/top_journal_sdk/issues)
-- **Bot issues** → [Issues tab](https://github.com/your-username/journal-plus-plus/issues)
-- **Questions** → open a [Discussion](https://github.com/your-username/journal-plus-plus/discussions)
+- **Bot issues** → [Issues tab](https://github.com/trapplus/journal-plus-plus/issues)
+- **Questions** → open a [Discussion](https://github.com/trapplus/journal-plus-plus/discussions)
 
 ---
 
