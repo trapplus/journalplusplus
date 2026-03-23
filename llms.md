@@ -57,6 +57,8 @@
 
 # Journal++ — AI Context Document
 
+<!-- LLM Claude: добавлена секция логгера, обновлена структура проекта, задокументированы все реализованные решения:: -->
+
 ## Правила для AI-ассистентов
 
 ### Toolchain
@@ -72,15 +74,20 @@
 - Type hints обязательны для публичных методов и классов
 - Исключения обрабатываются явно, `bare except` запрещён
 
+### Правила по логированию
+- Единый логгер: `from middleware.logging.logger import logger`
+- `setup_logger(log_level=config.LOG_LEVEL)` вызывается **первым** в `main.py`, до любых других импортов логгера
+- Формат: `HH:mm:ss | LEVEL | module:function:line | message`
+- Вывод: консоль (colorize=True) + файл `logs/journal.log` (rotation 10MB, retention 7 дней)
+- Нигде в проекте не использовать `print()` и стандартный `logging`
+
 ### Правила по комментариям
 - Язык: русский или английский — как удобнее в контексте
 - Комментировать why и неочевидные решения, не what
 - Никакого docstring-спама на каждый метод
-- Хорошо: `# сервер журнала не даёт вебхуков, поэтому поллинг`
-- Плохо: `# этот метод получает расписание пользователя`
 
 ### Важный контекст по SDK
-`top_journal_sdk` — неофициальный, построен на ручном реверсе API Top Academy. Официальной документации нет. При обновлениях сервера SDK может сломаться. Баги в слое данных решаются в репо SDK, не здесь: https://github.com/ITTopTools/top_journal_sdk
+`top_journal_sdk` — неофициальный, построен на ручном реверсе API Top Academy. Официальной документации нет. При обновлениях сервера SDK может сломаться. Баги в слое данных решаются в репо SDK: https://github.com/ITTopTools/top_journal_sdk
 
 ---
 
@@ -92,101 +99,11 @@ main.py
           ├── Dispatcher (aiogram) — polling Telegram updates
           └── NotificationService.run() — polling Journal API
                     │
-                    └── итерируется по users из DB
+                    └── итерируется по users из DB батчами
                               └── JournalClient(token=user.token)
 ```
 
-Всё крутится в **одном event loop**. Потоки не используются — весь стек async.
-
----
-
-## Слои проекта
-
-### `bot/` — Telegram-слой
-- `handlers/` — хендлеры команд и callback'ов (по одному файлу на фичу)
-- `keyboards/` — inline и reply клавиатуры
-- `middlewares/` — авторизация, логирование, throttling
-- `filters/` — кастомные aiogram-фильтры
-
-### `services/` — бизнес-логика
-- `NotificationService` — единый поллер уведомлений для всех пользователей
-- Сервисы не знают про Telegram, работают с данными и DB
-
-### `db/` — база данных
-- Модели и миграции
-- `engine.py` — инициализация (`init_db()` вызывается в `on_startup`)
-
-### `config.py`
-- Настройки через `pydantic-settings`, читает из `.env`
-
----
-
-## Функционал бота
-
-| Фича | Описание |
-|---|---|
-| 📅 Расписание | Просмотр на день / неделю |
-| 📊 Оценки | Текущие оценки по предметам |
-| ✅ Посещаемость | Статистика и пропуски |
-| 📎 ДЗ | Загрузка и скачивание файлов напрямую в чате |
-| 🖼 Аватар | Смена аватара через бота |
-| 🔔 Уведомления | Изменения расписания, новые оценки, статус ДЗ, ивенты |
-
----
-
-## Система уведомлений (ключевое архитектурное решение)
-
-**Проблема:** сервер журнала не имеет вебхуков и задокументированного API. SDK построен на реверсе.
-
-**Решение:** единый поллер, который итерируется по всем пользователям батчами.
-
-```python
-BATCH_SIZE = 10      # параллельных запросов за раз
-BATCH_DELAY = 2      # сек между батчами (защита от 429)
-POLL_INTERVAL = 60   # сек между полными циклами
-```
-
-- Один `NotificationService` на всё приложение
-- `asyncio.gather(*tasks, return_exceptions=True)` — ошибка одного юзера не роняет цикл
-- Сравниваем текущие данные с кэшем в DB, при изменении шлём `bot.send_message()`
-- `bot.send_message()` работает в polling mode без каких-либо ограничений — polling это только про получение апдейтов от Telegram, отправка всегда свободна
-
-Подробнее: см. `NOTIFICATIONS.md`
-
----
-
-## `main.py` — точка входа
-
-```python
-async def main():
-    bot = Bot(token=config.BOT_TOKEN)
-    dp = Dispatcher()
-    dp.include_router(router)
-    dp.startup.register(on_startup)  # init_db здесь
-
-    notification_service = NotificationService(bot)
-
-    await asyncio.gather(
-        dp.start_polling(bot),
-        notification_service.run(),
-    )
-
-asyncio.run(main())
-```
-
----
-
-## DB — что хранить на пользователя
-
-```
-users
-├── chat_id            — Telegram chat id, куда слать сообщения
-├── token              — токен сессии журнала Top Academy
-├── notifications_on   — bool, включены ли уведомления
-├── cached_schedule    — последнее известное расписание (JSON)
-├── cached_grades      — последние известные оценки (JSON)
-└── cached_hw_status   — последний статус ДЗ (JSON)
-```
+Всё крутится в **одном event loop**. Потоки не используются.
 
 ---
 
@@ -195,27 +112,131 @@ users
 ```
 journalplusplus/
 ├── bot/
-│   ├── handlers/
-│   │   ├── schedule.py
-│   │   ├── grades.py
-│   │   ├── attendance.py
-│   │   ├── homework.py
-│   │   └── notifications.py
-│   ├── keyboards/
-│   ├── middlewares/
-│   └── filters/
-├── services/
-│   └── notifications.py   # NotificationService
+│   ├── __init__.py
+│   └── handler/
+│       ├── __init__.py        # get_all_routers() — реэкспорт всех роутеров
+│       ├── attendance.py
+│       ├── grades.py
+│       ├── help.py
+│       ├── homework.py
+│       ├── login.py
+│       └── schedule.py
 ├── db/
-│   └── engine.py
-├── config.py
-├── main.py
+│   ├── __init__.py
+│   └── engine.py              # init_db(), вызывается в on_startup
+├── middleware/
+│   ├── cors/
+│   └── logging/
+│       └── logger.py          # setup_logger(), единый логгер проекта
+├── services/
+│   ├── __init__.py
+│   ├── homework/
+│   ├── login/
+│   └── notification/          # NotificationService (M8)
+├── config.py                  # pydantic-settings, читает .env
+├── main.py                    # точка входа
+├── Dockerfile
 ├── pyproject.toml
 ├── uv.lock
-├── Dockerfile
 ├── .env.example
-├── llms.md                # этот файл
-└── NOTIFICATIONS.md       # детальная документация поллера
+├── llms.md                    # этот файл
+└── NOTIFICATIONS.md           # детальная документация поллера уведомлений
+```
+
+---
+
+## Реализованные решения
+
+### `config.py`
+`pydantic-settings`, `BaseSettings`. Поля: `BOT_TOKEN`, `LOG_LEVEL`, `DB_TYPE`, `DB_URL`.
+`model_validator` проверяет что `DB_TYPE` один из `{sqlite, postgres, mysql}`.
+`BOT_TOKEN` без дефолта — обязательное поле, падает при старте если не задан.
+Pyright ругается на отсутствие дефолта — ложное срабатывание, в рантайме корректно.
+
+```python
+model_config = {"env_file": ".env"}
+```
+
+### `bot/handler/__init__.py`
+Реэкспортирует все роутеры через `get_all_routers() -> list[Router]`.
+
+```python
+# main.py
+for router in get_all_routers():
+    dp.include_router(router)
+```
+
+Роутеры в каждом хендлере инициализируются через:
+```python
+from aiogram import Router
+router = Router(name=__name__)
+```
+
+### `middleware/logging/logger.py`
+`setup_logger(log_level)` настраивает loguru.
+Формат: `HH:mm:ss | LEVEL | name:function:line | message`.
+Консоль (colorize) + файл с rotation 10MB / retention 7 дней.
+
+### `main.py`
+```python
+setup_logger(log_level=config.LOG_LEVEL)   # первым делом
+
+bot = Bot(token=config.BOT_TOKEN)
+dp = Dispatcher()
+
+for router in get_all_routers():
+    dp.include_router(router)
+
+dp.startup.register(on_startup)            # init_db здесь
+
+await dp.start_polling(bot)
+```
+
+`NotificationService` подключается через `asyncio.gather` на M8.
+
+---
+
+## Система уведомлений
+
+**Проблема:** нет вебхуков, нет документированного API.
+
+**Решение:** единый поллер по всем пользователям батчами.
+
+```
+BATCH_SIZE = 10      # параллельных запросов за раз
+BATCH_DELAY = 2      # сек между батчами (защита от 429)
+POLL_INTERVAL = 60   # сек между полными циклами
+```
+
+- `asyncio.gather(*tasks, return_exceptions=True)` — ошибка одного юзера не роняет цикл
+- `bot.send_message()` работает в polling mode без ограничений
+- Сравниваем данные с кэшем в DB, при изменении шлём уведомление
+
+Подробнее: `NOTIFICATIONS.md`
+
+---
+
+## DB — схема таблицы users
+
+```
+users
+├── chat_id            — Telegram chat id
+├── token              — токен сессии журнала
+├── notifications_on   — bool
+├── cached_schedule    — JSON
+├── cached_grades      — JSON
+└── cached_hw_status   — JSON
+```
+
+---
+
+## .env.example
+
+```
+BOT_TOKEN=your_telegram_bot_token
+LOG_LEVEL=INFO
+DB_TYPE=sqlite
+DB_URL=sqlite:///./database.db
 ```
 
 ---
@@ -225,12 +246,12 @@ journalplusplus/
 | # | Задача | Статус |
 |---|---|---|
 | M1 | Структура проекта, конфиг, Docker | ✅ |
-| M2 | Авторизация, сохранение токена в DB | ⬜ |
-| M3 | Расписание — просмотр | ⬜ |
-| M4 | Оценки — просмотр | ⬜ |
-| M5 | Посещаемость — просмотр | ⬜ |
-| M6 | ДЗ — загрузка и скачивание файлов | ⬜ |
-| M7 | Смена аватара | ⬜ |
+| M2 | `config.py`, логгер, `main.py`, роутеры | ✅ |
+| M3 | Авторизация, сохранение токена в DB | ⬜ |
+| M4 | Расписание — просмотр | ⬜ |
+| M5 | Оценки — просмотр | ⬜ |
+| M6 | Посещаемость — просмотр | ⬜ |
+| M7 | ДЗ — загрузка и скачивание файлов | ⬜ |
 | M8 | NotificationService — поллинг и уведы | ⬜ |
 | M9 | UI-полировка, клавиатуры, FSM | ⬜ |
 | M10 | README, документация, демо | ⬜ |
@@ -239,7 +260,7 @@ journalplusplus/
 
 ## Известные ограничения
 
-- API журнала не задокументирован — при обновлениях сервера SDK может сломаться
-- Нет гарантии моментальной доставки уведомлений — задержка до `POLL_INTERVAL` сек
-- SQLite только для разработки — при расширении аудитории мигрировать на PostgreSQL
-- При 1000+ пользователей поллер стоит вынести в отдельный контейнер с очередью задач (arq / Celery + Redis)
+- API журнала не задокументирован — при обновлениях SDK может сломаться
+- Задержка уведомлений до `POLL_INTERVAL` секунд
+- SQLite только для разработки — при расширении мигрировать на PostgreSQL
+- При 1000+ пользователях поллер стоит вынести в отдельный контейнер (arq / Celery + Redis)
