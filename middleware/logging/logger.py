@@ -2,7 +2,7 @@ import sys
 from loguru import logger
 
 
-def setup_logger(log_level: str = "INFO") -> None:
+def setup_logger(log_level: str) -> None:
     logger.remove()
 
     fmt = (
